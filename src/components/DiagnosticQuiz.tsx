@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, ArrowRight, RotateCcw, Check, MessageSquare, ChevronRight } from 'lucide-react';
 import { DIAGNOSTIC_QUESTIONS } from '../data/content';
 
@@ -10,6 +10,7 @@ export default function DiagnosticQuiz({ onSelectRecommendation }: DiagnosticQui
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [hasAutoSent, setHasAutoSent] = useState(false);
 
   const currentQuestion = DIAGNOSTIC_QUESTIONS[currentStep];
 
@@ -29,6 +30,7 @@ export default function DiagnosticQuiz({ onSelectRecommendation }: DiagnosticQui
     setCurrentStep(0);
     setAnswers([]);
     setIsCompleted(false);
+    setHasAutoSent(false);
   };
 
   // Compute recommendation
@@ -65,6 +67,31 @@ export default function DiagnosticQuiz({ onSelectRecommendation }: DiagnosticQui
   };
 
   const recommendation = getRecommendation();
+
+  useEffect(() => {
+    if (isCompleted && !hasAutoSent && answers.length === DIAGNOSTIC_QUESTIONS.length) {
+      setHasAutoSent(true);
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          access_key: '358405bd-7f01-4888-a021-fd4e5074ee91',
+          subject: `Diagnostic express complété - ${recommendation.service}`,
+          from_name: 'Site FOLO Coaching & Formation',
+          name: '(visiteur du diagnostic express, non identifié)',
+          programme_recommande: recommendation.service,
+          synthese: recommendation.summary,
+          feuille_de_route: recommendation.actionSteps.join(' | '),
+        }),
+      }).catch(() => {
+        // Envoi silencieux : en cas d'échec réseau, le bouton WhatsApp reste le repli visible.
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCompleted]);
 
   return (
     <section id="diagnostic-section" className="py-16 bg-[#F8F7F4] border-b border-slate-200/80">
