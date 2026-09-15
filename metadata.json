@@ -1,0 +1,6 @@
+{
+  "name": "FOLO Coaching & Formation",
+  "description": "Plateforme officielle de FOLO Coaching & Formation : coaching professionnel, leadership opérationnel, formations pratiques et mentorat à Bobo-Dioulasso et en Afrique de l'Ouest.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
