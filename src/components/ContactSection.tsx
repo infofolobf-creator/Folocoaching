@@ -22,16 +22,47 @@ export default function ContactSection({ prefilledService, prefilledNotes }: Con
 
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const whatsappFallbackLink = COMPANY_INFO.whatsappLink;
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(false);
 
-    // Simulate safe local persistence and feedback
-    setTimeout(() => {
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          access_key: '358405bd-7f01-4888-a021-fd4e5074ee91',
+          subject: `Demande de devis - ${formData.organization || formData.fullName}`,
+          from_name: 'Site FOLO Coaching & Formation',
+          name: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          organization: formData.organization,
+          service_interest: formData.serviceInterest,
+          message: formData.message || '(non renseigné)',
+        }),
+      });
+
+      const result = await response.json();
       setLoading(false);
-      setSubmitted(true);
-    }, 600);
+
+      if (result.success) {
+        setSubmitted(true);
+      } else {
+        setError(true);
+      }
+    } catch (err) {
+      setLoading(false);
+      setError(true);
+    }
   };
 
   return (
@@ -260,6 +291,16 @@ export default function ContactSection({ prefilledService, prefilledNotes }: Con
                       className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white text-sm leading-relaxed"
                     />
                   </div>
+
+                  {error && (
+                    <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                      La transmission a échoué (connexion instable).{' '}
+                      <a href={whatsappFallbackLink} target="_blank" rel="noopener noreferrer" className="font-bold underline">
+                        Envoyez votre demande via WhatsApp
+                      </a>{' '}
+                      ou réessayez.
+                    </div>
+                  )}
 
                   <button
                     type="submit"

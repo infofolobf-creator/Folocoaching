@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { X, CheckCircle, Calendar, Clock, MapPin, Send } from 'lucide-react';
 import { TrainingProgram } from '../types';
+import { COMPANY_INFO } from '../data/content';
 
 interface EnrollmentModalProps {
   program: TrainingProgram | null;
@@ -14,12 +15,50 @@ export default function EnrollmentModal({ program, isOpen, onClose }: Enrollment
   const [phone, setPhone] = useState('');
   const [participantsCount, setParticipantsCount] = useState('1');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   if (!isOpen || !program) return null;
 
-  const handleSubmit = (e: FormEvent) => {
+  const whatsappFallbackLink = COMPANY_INFO.whatsappLink;
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError(false);
+
+    try {
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          access_key: '358405bd-7f01-4888-a021-fd4e5074ee91',
+          subject: `Inscription - ${program.title}`,
+          from_name: 'Site FOLO Coaching & Formation',
+          training_title: program.title,
+          session: program.nextSession || 'à confirmer',
+          name,
+          email,
+          phone,
+          participants_count: participantsCount,
+        }),
+      });
+
+      const result = await response.json();
+      setLoading(false);
+
+      if (result.success) {
+        setSubmitted(true);
+      } else {
+        setError(true);
+      }
+    } catch (err) {
+      setLoading(false);
+      setError(true);
+    }
   };
 
   return (
@@ -121,12 +160,23 @@ export default function EnrollmentModal({ program, isOpen, onClose }: Enrollment
                 </div>
               </div>
 
+              {error && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                  La transmission a échoué (connexion instable).{' '}
+                  <a href={whatsappFallbackLink} target="_blank" rel="noopener noreferrer" className="font-bold underline">
+                    Envoyez votre demande via WhatsApp
+                  </a>{' '}
+                  ou réessayez.
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full mt-2 inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-5 rounded-xl shadow transition-colors cursor-pointer text-sm"
+                disabled={loading}
+                className="w-full mt-2 inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold py-3 px-5 rounded-xl shadow transition-colors cursor-pointer text-sm"
               >
                 <Send className="w-4 h-4" />
-                <span>Confirmer ma demande d'inscription</span>
+                <span>{loading ? 'Transmission en cours...' : "Confirmer ma demande d'inscription"}</span>
               </button>
             </form>
           </div>
@@ -139,8 +189,7 @@ export default function EnrollmentModal({ program, isOpen, onClose }: Enrollment
               Demande enregistrée avec succès !
             </h4>
             <p className="text-sm text-slate-600">
-              Nous avons bien noté votre intérêt pour <span className="font-semibold">{program.title}</span>.
-              Un conseiller FOLO prendra contact avec vous pour vous transmettre les détails logistiques et la convention.
+              Votre inscription pour <span className="font-semibold">{program.title}</span> a bien été transmise à notre équipe. Un conseiller FOLO vous recontactera pour les détails logistiques.
             </p>
             <button
               onClick={() => {
